@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Decision Room">
@@ -38,11 +38,13 @@
     background: var(--bg);
     color: var(--text);
     font-family: var(--body);
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: 100%;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%;
   }
 
   /* ── Header ── */
@@ -872,6 +874,14 @@ function scrollToBottom() {
 }
 
 init();
+
+// iOS keyboard fix
+const input = document.getElementById('msg-input');
+if (input) {
+  input.addEventListener('focus', () => {
+    setTimeout(() => scrollToBottom(), 300);
+  });
+}
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(() => {});
