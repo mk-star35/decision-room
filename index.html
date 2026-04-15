@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Decision Room">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="manifest" href="manifest.json">
+<title>Decision Room</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --surface3: #222222;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #f0ede8;
+    --text2: #8a8680;
+    --text3: #555250;
+    --accent: #c8b89a;
+    --accent2: #e8d5b5;
+    --danger: #c0392b;
+    --danger-soft: rgba(192,57,43,0.15);
+    --house: #b8a890;
+    --house-bg: rgba(184,168,144,0.08);
+    --mono: 'DM Mono', monospace;
+    --display: 'Bebas Neue', sans-serif;
+    --body: 'DM Sans', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  .app-header {
+    padding: 52px 20px 0;
+    flex-shrink: 0;
+  }
+  .app-title {
+    font-family: var(--display);
+    font-size: 28px;
+    letter-spacing: 3px;
+    color: var(--accent2);
+    text-transform: uppercase;
+  }
+  .app-subtitle {
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 2px;
+    font-family: var(--mono);
+  }
+
+  /* ── Tab Nav ── */
+  .tab-nav {
+    display: flex;
+    gap: 0;
+    padding: 16px 20px 0;
+    border-bottom: 0.5px solid var(--border);
+    flex-shrink: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tab-nav::-webkit-scrollbar { display: none; }
+
+  .tab-btn {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text3);
+    background: none;
+    border: none;
+    padding: 8px 14px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    position: relative;
+    transition: color 0.2s;
+  }
+  .tab-btn.active {
+    color: var(--accent2);
+  }
+  .tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 14px; right: 14px;
+    height: 1.5px;
+    background: var(--accent);
+  }
+  .tab-btn.soon { opacity: 0.35; cursor: default; }
+  .tab-btn.soon::before {
+    content: '·';
+    margin-right: 4px;
+    color: var(--text3);
+  }
+
+  /* ── Tab Content ── */
+  .tab-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .tab-panel {
+    display: none;
+    flex: 1;
+    overflow: hidden;
+    flex-direction: column;
+  }
+  .tab-panel.active { display: flex; }
+
+  /* ── Coming Soon panels ── */
+  .coming-soon {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 40px;
+  }
+  .coming-soon-icon {
+    font-size: 32px;
+    opacity: 0.3;
+  }
+  .coming-soon-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  /* ────────────────────────────
+     자기확신 탭
+  ──────────────────────────── */
+
+  .house-tab {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* Evidence Locker */
+  .evidence-locker {
+    flex-shrink: 0;
+    padding: 14px 20px 0;
+  }
+  .locker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding-bottom: 10px;
+  }
+  .locker-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text3);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .locker-title::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    border: 1px solid var(--text3);
+    border-radius: 1px;
+  }
+  .locker-toggle {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .locker-toggle:hover { color: var(--accent); }
+
+  .locker-body {
+    display: none;
+    padding-bottom: 12px;
+  }
+  .locker-body.open { display: block; }
+
+  .locker-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .locker-card {
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .locker-card:hover { border-color: var(--border2); background: var(--surface3); }
+  .locker-card.loaded {
+    border-color: rgba(200,184,154,0.3);
+    background: rgba(200,184,154,0.06);
+  }
+  .locker-card-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 4px;
+  }
+  .locker-card-value {
+    font-size: 11px;
+    color: var(--text2);
+    line-height: 1.4;
+  }
+  .locker-card.loaded .locker-card-value { color: var(--accent); }
+
+  .notion-sync-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 14px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text2);
+    width: 100%;
+    text-align: left;
+    transition: border-color 0.2s;
+  }
+  .notion-sync-btn:hover { border-color: var(--border2); color: var(--accent); }
+  .notion-status {
+    font-size: 9px;
+    color: var(--text3);
+    margin-left: auto;
+    font-family: var(--mono);
+  }
+
+  .locker-divider {
+    height: 0.5px;
+    background: var(--border);
+    margin: 4px 0 0;
+  }
+
+  /* House Chat */
+  .house-chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface3) transparent;
+  }
+  .house-chat::-webkit-scrollbar { width: 3px; }
+  .house-chat::-webkit-scrollbar-thumb { background: var(--surface3); }
+
+  /* House intro */
+  .house-intro {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .house-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--surface3);
+    border: 1px solid var(--border2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+  .house-bubble {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 12px 12px 12px 4px;
+    padding: 12px 16px;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text2);
+    max-width: calc(100% - 48px);
+  }
+  .house-bubble strong { color: var(--accent2); font-weight: 400; }
+  .house-bubble em { color: var(--house); font-style: normal; font-family: var(--mono); font-size: 12px; }
+
+  /* User bubble */
+  .user-msg {
+    align-self: flex-end;
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: 12px 12px 4px 12px;
+    padding: 10px 14px;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text);
+    max-width: 85%;
+  }
+
+  /* House response */
+  .house-msg {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .house-response {
+    background: var(--house-bg);
+    border: 0.5px solid rgba(184,168,144,0.2);
+    border-radius: 12px 12px 12px 4px;
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.72;
+    color: var(--text);
+    max-width: calc(100% - 48px);
+  }
+  .house-response .diagnosis {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--house);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .house-response .diagnosis::before {
+    content: '';
+    display: inline-block;
+    width: 20px; height: 0.5px;
+    background: var(--house);
+  }
+  .house-response .evidence-ref {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 0.5px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+  .house-response .evidence-ref span {
+    color: var(--accent);
+  }
+
+  /* Thinking indicator */
+  .thinking {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .thinking-dots {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+  .thinking-dots span {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--text3);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse {
+    0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+    30% { opacity: 1; transform: scale(1.1); }
+  }
+
+  /* Input area */
+  .input-area {
+    flex-shrink: 0;
+    padding: 12px 20px 20px;
+    background: var(--bg);
+    border-top: 0.5px solid var(--border);
+  }
+  .input-wrap {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    background: var(--surface);
+    border: 0.5px solid var(--border2);
+    border-radius: 14px;
+    padding: 10px 14px;
+    transition: border-color 0.2s;
+  }
+  .input-wrap:focus-within { border-color: rgba(200,184,154,0.4); }
+
+  #msg-input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 15px;
+    line-height: 1.5;
+    resize: none;
+    max-height: 120px;
+    min-height: 24px;
+    overflow-y: auto;
+  }
+  #msg-input::placeholder { color: var(--text3); }
+
+  .send-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .send-btn:hover { background: var(--accent2); }
+  .send-btn:active { transform: scale(0.92); }
+  .send-btn svg { width: 14px; height: 14px; fill: var(--bg); }
+  .send-btn:disabled { background: var(--surface3); cursor: default; }
+
+  .input-hint {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+
+  /* API key setup */
+  .api-setup {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    gap: 16px;
+    text-align: center;
+  }
+  .api-setup-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+  .api-setup-desc {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.6;
+    max-width: 280px;
+  }
+  .api-key-input {
+    width: 100%;
+    max-width: 320px;
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .api-key-input:focus { border-color: rgba(200,184,154,0.5); }
+  .api-key-input::placeholder { color: var(--text3); }
+  .api-save-btn {
+    background: var(--surface2);
+    border: 0.5px solid var(--accent);
+    border-radius: 10px;
+    padding: 12px 28px;
+    color: var(--accent2);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .api-save-btn:hover { background: var(--surface3); }
+
+  .safe-area-bottom { height: env(safe-area-inset-bottom, 0px); flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-title">Decision Room</div>
+  <div class="app-subtitle">by MK · private intelligence</div>
+</header>
+
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="house">자기확신</button>
+  <button class="tab-btn soon" data-tab="tarot">타로</button>
+  <button class="tab-btn soon" data-tab="relation">인간관계</button>
+  <button class="tab-btn soon" data-tab="more">+ 추가예정</button>
+</nav>
+
+<div class="tab-content">
+
+  <!-- 자기확신 탭 -->
+  <div class="tab-panel active" id="tab-house">
+    <div class="house-tab">
+
+      <!-- Evidence Locker -->
+      <div class="evidence-locker">
+        <div class="locker-header" onclick="toggleLocker()">
+          <div class="locker-title">Evidence Locker</div>
+          <button class="locker-toggle" id="locker-toggle-btn">열기 ↓</button>
+        </div>
+        <div class="locker-body" id="locker-body">
+          <div class="locker-grid">
+            <div class="locker-card" id="locker-diary" onclick="loadEvidence('diary')">
+              <div class="locker-card-label">일기/메모</div>
+              <div class="locker-card-value" id="locker-diary-val">연동 전</div>
+            </div>
+            <div class="locker-card" id="locker-saju" onclick="loadEvidence('saju')">
+              <div class="locker-card-label">사주/운세</div>
+              <div class="locker-card-value" id="locker-saju-val">연동 전</div>
+            </div>
+            <div class="locker-card" id="locker-career" onclick="loadEvidence('career')">
+              <div class="locker-card-label">커리어</div>
+              <div class="locker-card-value" id="locker-career-val">연동 전</div>
+            </div>
+          </div>
+          <button class="notion-sync-btn" onclick="syncNotion()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+            Notion 동기화
+            <span class="notion-status" id="notion-status">미연결</span>
+          </button>
+        </div>
+        <div class="locker-divider"></div>
+      </div>
+
+      <!-- API Setup (초기) -->
+      <div class="api-setup" id="api-setup">
+        <div class="api-setup-title">Anthropic API Key</div>
+        <div class="api-setup-desc">House가 작동하려면 API 키가 필요해. 한 번만 입력하면 로컬에 저장돼.</div>
+        <input class="api-key-input" type="password" id="api-key-field" placeholder="sk-ant-..." autocomplete="off">
+        <button class="api-save-btn" onclick="saveApiKey()">연결하기</button>
+      </div>
+
+      <!-- Chat UI -->
+      <div class="house-chat" id="house-chat" style="display:none;">
+        <div class="house-intro">
+          <div class="house-avatar">H</div>
+          <div class="house-bubble">
+            <strong>Dr. Gregory House.</strong><br>
+            뭘 확신하고 싶은 거야, 아니면 — 뭘 <em>이미 알면서</em> 모른 척하고 싶은 거야?<br><br>
+            그냥 털어놔. 거짓말은 내가 알아서 걸러낼 테니까.
+          </div>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div class="input-area" id="input-area" style="display:none;">
+        <div class="input-wrap">
+          <textarea id="msg-input" rows="1" placeholder="지금 막히는 게 뭔데..." oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+          <button class="send-btn" id="send-btn" onclick="sendMessage()">
+            <svg viewBox="0 0 16 16"><path d="M1 8L14 1 8 8 14 15 1 8z"/></svg>
+          </button>
+        </div>
+        <div class="input-hint">House는 팩폭 전문 · Evidence Locker 기반</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 타로 탭 -->
+  <div class="tab-panel" id="tab-tarot">
+    <div class="coming-soon">
+      <div class="coming-soon-icon">♠</div>
+      <div class="coming-soon-label">타로 탭 · 준비 중</div>
+    </div>
+  </div>
+
+  <!-- 인간관계 탭 -->
+  <div class="tab-panel" id="tab-relation">
+    <div class="coming-soon">
+      <div class="coming-soon-icon">◈</div>
+      <div class="coming-soon-label">인간관계 어드바이저 · 준비 중</div>
+    </div>
+  </div>
+
+  <!-- 추가예정 탭 -->
+  <div class="tab-panel" id="tab-more">
+    <div class="coming-soon">
+      <div class="coming-soon-icon">+</div>
+      <div class="coming-soon-label">추가 예정</div>
+    </div>
+  </div>
+
+</div>
+<div class="safe-area-bottom"></div>
+
+<script>
+const STORAGE_KEY = 'dr_api_key';
+const EVIDENCE_KEY = 'dr_evidence';
+
+let apiKey = localStorage.getItem(STORAGE_KEY) || '';
+let conversationHistory = [];
+let evidenceData = JSON.parse(localStorage.getItem(EVIDENCE_KEY) || '{}');
+let lockerOpen = false;
+
+// ── Tabs ──
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  if (btn.classList.contains('soon')) return;
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Init ──
+function init() {
+  if (apiKey) showChat();
+  updateEvidenceUI();
+}
+
+function showChat() {
+  document.getElementById('api-setup').style.display = 'none';
+  document.getElementById('house-chat').style.display = 'flex';
+  document.getElementById('input-area').style.display = 'block';
+}
+
+function saveApiKey() {
+  const val = document.getElementById('api-key-field').value.trim();
+  if (!val.startsWith('sk-ant-') && !val.startsWith('sk-')) {
+    document.getElementById('api-key-field').style.borderColor = 'rgba(192,57,43,0.6)';
+    return;
+  }
+  apiKey = val;
+  localStorage.setItem(STORAGE_KEY, apiKey);
+  showChat();
+}
+
+// ── Evidence Locker ──
+function toggleLocker() {
+  lockerOpen = !lockerOpen;
+  document.getElementById('locker-body').classList.toggle('open', lockerOpen);
+  document.getElementById('locker-toggle-btn').textContent = lockerOpen ? '닫기 ↑' : '열기 ↓';
+}
+
+function loadEvidence(type) {
+  const labels = { diary: '일기/메모', saju: '사주/운세', career: '커리어' };
+  const mockData = {
+    diary: '최근 6개월 메모 12건',
+    saju: '乙丑일주 · 己丑대운',
+    career: '재경팀 과장 · 11년'
+  };
+  evidenceData[type] = mockData[type];
+  localStorage.setItem(EVIDENCE_KEY, JSON.stringify(evidenceData));
+  updateEvidenceUI();
+}
+
+function updateEvidenceUI() {
+  const types = ['diary', 'saju', 'career'];
+  types.forEach(t => {
+    const card = document.getElementById('locker-' + t);
+    const val = document.getElementById('locker-' + t + '-val');
+    if (evidenceData[t]) {
+      card.classList.add('loaded');
+      val.textContent = evidenceData[t];
+    } else {
+      card.classList.remove('loaded');
+      val.textContent = '연동 전';
+    }
+  });
+}
+
+function syncNotion() {
+  const status = document.getElementById('notion-status');
+  status.textContent = '연동 중...';
+  setTimeout(() => {
+    status.textContent = '준비 중 (다음 버전)';
+  }, 1200);
+}
+
+// ── Chat ──
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+async function sendMessage() {
+  const input = document.getElementById('msg-input');
+  const text = input.value.trim();
+  if (!text || !apiKey) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('send-btn').disabled = true;
+
+  appendUserMsg(text);
+  conversationHistory.push({ role: 'user', content: text });
+
+  const thinking = appendThinking();
+  scrollToBottom();
+
+  try {
+    const reply = await callHouse(text);
+    thinking.remove();
+    appendHouseMsg(reply);
+    conversationHistory.push({ role: 'assistant', content: reply });
+  } catch(e) {
+    thinking.remove();
+    appendHouseMsg('..API 오류. 키 확인해봐. (' + (e.message || '알 수 없음') + ')');
+  }
+
+  document.getElementById('send-btn').disabled = false;
+  scrollToBottom();
+}
+
+async function callHouse(userMsg) {
+  const evidenceSummary = buildEvidenceSummary();
+
+  const systemPrompt = `당신은 Dr. Gregory House입니다. 냉소적이고, 직설적이며, 감정적 위로 없이 진실을 파고드는 인물입니다.
+
+역할: 사용자의 생각, 불안, 결정, 자기의심을 Evidence 기반으로 분석하고 팩폭합니다.
+
+말투 원칙:
+- 한국어로 대화하되 House의 냉소적 어조 유지
+- 문장은 짧고 날카롭게. 불필요한 위로 없음
+- 상대방이 스스로 이미 알고 있는 진실을 짚어줌
+- "왜 그런 생각이 드는지"의 근거를 논리적으로 제시
+- 가끔 비유와 의학적 은유 사용 허용
+
+Evidence Locker (보유 데이터):
+${evidenceSummary}
+
+응답 구조:
+1. 핵심 팩폭 (2-3문장)
+2. 왜 그런 생각이 오는지 근거 분석
+3. Evidence가 있으면 참조 (없으면 생략)
+
+절대 금지: 감정적 격려, "잘 하고 있어요", "힘내세요" 류의 발언`;
+
+  const messages = [
+    ...conversationHistory.slice(-6),
+  ];
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 600,
+      system: systemPrompt,
+      messages
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || res.status);
+  }
+  const data = await res.json();
+  return data.content[0].text;
+}
+
+function buildEvidenceSummary() {
+  const lines = [];
+  if (evidenceData.diary) lines.push('- 일기/메모: ' + evidenceData.diary);
+  if (evidenceData.saju) lines.push('- 사주/운세: ' + evidenceData.saju);
+  if (evidenceData.career) lines.push('- 커리어: ' + evidenceData.career);
+  return lines.length ? lines.join('\n') : '(아직 없음 — 텍스트 입력 내용으로만 판단)';
+}
+
+// ── DOM helpers ──
+function appendUserMsg(text) {
+  const chat = document.getElementById('house-chat');
+  const div = document.createElement('div');
+  div.className = 'user-msg';
+  div.textContent = text;
+  chat.appendChild(div);
+}
+
+function appendThinking() {
+  const chat = document.getElementById('house-chat');
+  const wrap = document.createElement('div');
+  wrap.className = 'thinking';
+  wrap.innerHTML = `
+    <div class="house-avatar">H</div>
+    <div class="thinking-dots"><span></span><span></span><span></span></div>`;
+  chat.appendChild(wrap);
+  return wrap;
+}
+
+function appendHouseMsg(text) {
+  const chat = document.getElementById('house-chat');
+  const wrap = document.createElement('div');
+  wrap.className = 'house-msg';
+
+  const hasEvidence = evidenceData.diary || evidenceData.saju || evidenceData.career;
+  const evidenceLine = hasEvidence
+    ? `<div class="evidence-ref">참조 Evidence: ${Object.values(evidenceData).filter(Boolean).join(' · ')}</div>`
+    : '';
+
+  wrap.innerHTML = `
+    <div class="house-avatar">H</div>
+    <div class="house-response">
+      <div class="diagnosis">진단</div>
+      ${escapeHtml(text).replace(/\n/g, '<br>')}
+      ${evidenceLine}
+    </div>`;
+  chat.appendChild(wrap);
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function scrollToBottom() {
+  const chat = document.getElementById('house-chat');
+  setTimeout(() => chat.scrollTop = chat.scrollHeight, 50);
+}
+
+init();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
