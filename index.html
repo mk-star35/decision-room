@@ -576,14 +576,6 @@
         <div class="locker-divider"></div>
       </div>
 
-      <!-- API Setup (초기) -->
-      <div class="api-setup" id="api-setup">
-        <div class="api-setup-title">Anthropic API Key</div>
-        <div class="api-setup-desc">House가 작동하려면 API 키가 필요해. 한 번만 입력하면 로컬에 저장돼.</div>
-        <input class="api-key-input" type="password" id="api-key-field" placeholder="sk-ant-..." autocomplete="off">
-        <button class="api-save-btn" onclick="saveApiKey()">연결하기</button>
-      </div>
-
       <!-- Chat UI -->
       <div class="house-chat" id="house-chat" style="display:none;">
         <div class="house-intro">
@@ -638,10 +630,8 @@
 <div class="safe-area-bottom"></div>
 
 <script>
-const STORAGE_KEY = 'dr_api_key';
 const EVIDENCE_KEY = 'dr_evidence';
 
-let apiKey = localStorage.getItem(STORAGE_KEY) || '';
 let conversationHistory = [];
 let evidenceData = JSON.parse(localStorage.getItem(EVIDENCE_KEY) || '{}');
 let lockerOpen = false;
@@ -659,25 +649,13 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 // ── Init ──
 function init() {
-  if (apiKey) showChat();
+  showChat();
   updateEvidenceUI();
 }
 
 function showChat() {
-  document.getElementById('api-setup').style.display = 'none';
   document.getElementById('house-chat').style.display = 'flex';
   document.getElementById('input-area').style.display = 'block';
-}
-
-function saveApiKey() {
-  const val = document.getElementById('api-key-field').value.trim();
-  if (!val.startsWith('sk-ant-') && !val.startsWith('sk-')) {
-    document.getElementById('api-key-field').style.borderColor = 'rgba(192,57,43,0.6)';
-    return;
-  }
-  apiKey = val;
-  localStorage.setItem(STORAGE_KEY, apiKey);
-  showChat();
 }
 
 // ── Evidence Locker ──
@@ -738,7 +716,7 @@ function handleKey(e) {
 async function sendMessage() {
   const input = document.getElementById('msg-input');
   const text = input.value.trim();
-  if (!text || !apiKey) return;
+  if (!text) return;
 
   input.value = '';
   input.style.height = 'auto';
@@ -767,53 +745,30 @@ async function sendMessage() {
 async function callHouse(userMsg) {
   const evidenceSummary = buildEvidenceSummary();
 
-  const systemPrompt = `당신은 Dr. Gregory House입니다. 냉소적이고, 직설적이며, 감정적 위로 없이 진실을 파고드는 인물입니다.
-
-역할: 사용자의 생각, 불안, 결정, 자기의심을 Evidence 기반으로 분석하고 팩폭합니다.
-
-말투 원칙:
-- 한국어로 대화하되 House의 냉소적 어조 유지
-- 문장은 짧고 날카롭게. 불필요한 위로 없음
-- 상대방이 스스로 이미 알고 있는 진실을 짚어줌
-- "왜 그런 생각이 드는지"의 근거를 논리적으로 제시
-- 가끔 비유와 의학적 은유 사용 허용
-
-Evidence Locker (보유 데이터):
-${evidenceSummary}
-
-응답 구조:
-1. 핵심 팩폭 (2-3문장)
-2. 왜 그런 생각이 오는지 근거 분석
-3. Evidence가 있으면 참조 (없으면 생략)
-
-절대 금지: 감정적 격려, "잘 하고 있어요", "힘내세요" 류의 발언`;
-
   const messages = [
     ...conversationHistory.slice(-6),
   ];
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('/api/house', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 600,
-      system: systemPrompt,
-      messages
+      messages,
+      evidenceSummary
     })
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || res.status);
+    throw new Error(err.error || err.message || res.status);
   }
   const data = await res.json();
-  return data.content[0].text;
+  if (!data || typeof data.text !== 'string') {
+    throw new Error('응답 형식 오류');
+  }
+  return data.text;
 }
 
 function buildEvidenceSummary() {
