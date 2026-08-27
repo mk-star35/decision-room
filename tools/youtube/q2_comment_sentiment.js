@@ -43,7 +43,22 @@ async function main() {
   banner(`Q2: 댓글 의도 패턴 — ${targets.length}개 영상에서 수집, 상위 ${TOP_N}개 분석`);
 
   const all = [];
-  for (const t of targets) {
+
+  // Re-classify the already-collected corpus without spending quota. The raw text
+  // is kept in q2_comments_raw.jsonl precisely so the lexicon can be revised and
+  // re-run against the identical sample.
+  const rawPath = join(OUT_DIR, 'q2_comments_raw.jsonl');
+  if (arg('from-raw') && existsSync(rawPath)) {
+    for (const line of readFileSync(rawPath, 'utf8').trim().split('\n')) {
+      const r = JSON.parse(line);
+      all.push({
+        video_id: r.video_id, video_title: r.video_title, channel: r.channel,
+        author: r.author, text: r.text, likes: r.likes, replies: r.replies,
+        published_at: r.published_at,
+      });
+    }
+    console.log(`  (offline) 저장된 원문 ${all.length}개 재분류`);
+  } else for (const t of targets) {
     const threads = await yt.commentThreads(t.video_id, { order: 'relevance', maxResults: PER_VIDEO, maxPages: 1 });
     for (const th of threads) {
       const s = th.snippet?.topLevelComment?.snippet;
@@ -102,11 +117,11 @@ async function main() {
   console.log(`\n  --- 상위 ${top.length}개 댓글 의도 분포 ---`);
   console.table(table);
 
-  const comfort = dist.위안.primary + dist.정체성확인.primary + dist.자기서사.primary;
+  const comfort = dist.위안.primary + dist.정체성확인.primary + dist.자기서사.primary + dist.자기참조.primary;
   const knowledge = dist.지식.primary;
   console.log(
-    `\n  위안·거울 계열(위안+정체성확인+자기서사): ${comfort} (${((comfort / top.length) * 100).toFixed(1)}%)\n` +
-      `  지식 획득 계열:                          ${knowledge} (${((knowledge / top.length) * 100).toFixed(1)}%)\n` +
+    `\n  위안·거울 계열(위안+정체성확인+자기서사+자기참조): ${comfort} (${((comfort / top.length) * 100).toFixed(1)}%)\n` +
+      `  지식 획득 계열:                                  ${knowledge} (${((knowledge / top.length) * 100).toFixed(1)}%)\n` +
       `  → 비율 ${knowledge ? (comfort / knowledge).toFixed(1) : '∞'} : 1`
   );
 

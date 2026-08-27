@@ -19,6 +19,11 @@ import { writeCsv, writeJson, getKey, arg, banner } from './lib/output.js';
 
 const MONTHS = Number(arg('months', 12));
 const MIN_SUBS = Number(arg('min-subs', 3000));
+// Philosophy keywords surface plenty of channels that merely brushed the topic —
+// sentimental-story, stock-tip and variety channels ranked high on "삶의 의미"
+// and the like. Requiring the channel's own title/description/keywords to carry
+// philosophy terms is what separates a philosophy channel from a lucky match.
+const MIN_PHIL = Number(arg('min-phil', 2));
 
 const KEYWORDS = [
   '철학', '인문학', '철학 유튜브', '니체', '쇼펜하우어', '스토아 철학',
@@ -93,10 +98,16 @@ async function main() {
     .filter((c) => c.subscribers >= MIN_SUBS || c.hidden_subs)
     .sort((a, b) => b.subs_per_day - a.subs_per_day);
 
-  console.log(`\n  ${channels.length}개 중 ${MONTHS}개월 내 개설: ${channels.filter((c) => new Date(c.snippet.publishedAt).getTime() >= cutoff).length}`);
-  console.log(`  그 중 구독자 ${MIN_SUBS.toLocaleString()}+ : ${survivors.length}`);
+  const newCount = channels.filter((c) => new Date(c.snippet.publishedAt).getTime() >= cutoff).length;
+  const offTopic = survivors.filter((c) => c.philosophy_score < MIN_PHIL);
+  const onTopic = survivors.filter((c) => c.philosophy_score >= MIN_PHIL);
 
-  if (!survivors.length) {
+  console.log(`\n  ${channels.length}개 중 ${MONTHS}개월 내 개설: ${newCount}`);
+  console.log(`  그 중 구독자 ${MIN_SUBS.toLocaleString()}+ : ${survivors.length}`);
+  console.log(`  그 중 실제 철학 채널 (philosophy_score >= ${MIN_PHIL}): ${onTopic.length}`);
+  console.log(`  주제 무관으로 걸러낸 채널: ${offTopic.length} (예: ${offTopic.slice(0, 4).map((c) => c.channel).join(', ')})`);
+
+  if (!onTopic.length) {
     console.log(
       `\n  → 조건을 만족하는 채널이 없습니다. 이것 자체가 결과입니다:\n` +
         `    최근 ${MONTHS}개월 내 개설된 한국어 철학 채널 중 조회수 상위권에 오르면서\n` +
@@ -107,7 +118,7 @@ async function main() {
 
   // --- What did the breakout channels break out WITH? ----------------------
   const breakouts = [];
-  for (const s of survivors.slice(0, Number(arg('detail', 10)))) {
+  for (const s of onTopic.slice(0, Number(arg('detail', 10)))) {
     const top = await yt.search({
       channelId: s.channel_id,
       type: 'video',
@@ -170,15 +181,18 @@ async function main() {
     );
   }
 
-  writeCsv('q3_new_philosophy_channels.csv', survivors);
+  writeCsv('q3_new_philosophy_channels.csv', onTopic);
+  writeCsv('q3_filtered_out_offtopic.csv', offTopic); // kept so the filter itself can be audited
   writeJson('q3_new_philosophy_channels.json', {
     generated_at: new Date().toISOString(),
     window_months: MONTHS,
     min_subscribers: MIN_SUBS,
+    min_philosophy_score: MIN_PHIL,
     keywords: KEYWORDS,
     channels_examined: channels.length,
-    new_channels: channels.filter((c) => new Date(c.snippet.publishedAt).getTime() >= cutoff).length,
-    survivors,
+    new_channels: newCount,
+    survivors: onTopic,
+    filtered_out_offtopic: offTopic,
     breakouts,
   });
   console.log(`\n  → out/q3_new_philosophy_channels.csv / .json`);

@@ -101,13 +101,22 @@ export const COMMENT_BUCKETS = {
   정체성확인: {
     label: '정체성 확인 (나도 그렇다)',
     kw: ['나도', '저도', '제 얘기', '내 얘기', '내 이야기', '딱 나', '소름', '공감', '똑같', '그대로네',
-      '나를 보는', '나인 줄', '읽히는', '들켰'],
+      '나를 보는', '나인 줄', '읽히는', '들켰', '나만 그런', '나만 그랬', '완전 나', '딱 내', '찰떡',
+      '인정', '맞말', '내가 딱', '나랑 똑같'],
   },
   자기서사: {
     label: '자기 서사 (자기 인생 이야기)',
     // Detected structurally as well as lexically — see scoreComment().
     kw: ['저는', '제가', '나는', '어릴 때', '어렸을 때', '결혼', '이혼', '직장', '회사', '가족', '엄마', '아빠',
-      '친구가', '년째', '살면서', '지금까지', '평생'],
+      '친구가', '년째', '살면서', '지금까지', '평생', '저같은', '내향형', '외향형', '집순이', '집돌이',
+      '살아보니', '20대', '30대', '40대', '50대', '60대', '70대', '학교 다', '회사 다'],
+  },
+  자기참조: {
+    label: '자기 참조 (본인 얘기로 받아 반응)',
+    // Almost entirely structural — see the colloquial-ending rule in scoreComment().
+    // Korean comment sections lean heavily on subjectless self-report ("혼자가 편하긴 함"),
+    // which carries no first-person pronoun at all and so evades every keyword above.
+    kw: [],
   },
   반박: {
     label: '반박 / 비판',
@@ -121,6 +130,15 @@ export const COMMENT_BUCKETS = {
 
 /** Structural markers that a comment is a personal narrative rather than a reaction. */
 const FIRST_PERSON = ['저는', '제가', '나는', '내가', '저도', '나도', '제 ', '내 '];
+
+// Korean drops the subject constantly. "혼자가 편하긴 함", "신경이 곤두섬",
+// "괜찮은거 같음" are all first-person self-reports with no pronoun in them.
+// Matching the sentence ending is the only way to catch that register, and it is
+// the dominant register in these comment sections.
+const SELF_REPORT_ENDINGS = [
+  '함', '됨', '임', '음..', '더라', '더라고', '거 같음', '거같음', '것 같음', '같음',
+  '하긴함', '이었네', '아니었네', '겠음', '였음', '했음', '있음',
+];
 
 export function scoreComment(text = '') {
   const t = text.replace(/\s+/g, ' ').trim();
@@ -138,11 +156,28 @@ export function scoreComment(text = '') {
   if (t.length >= 120 && firstPersonHits >= 1) scores.자기서사 += 2;
   if (t.length >= 250 && firstPersonHits >= 2) scores.자기서사 += 2;
 
-  const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  // Subjectless self-report. Checked per clause, not per substring: "함" alone
+  // would fire inside 함께/포함, but a clause ENDING in 함 is a self-report.
+  // Comments routinely stack several such clauses without terminal punctuation
+  // ("혼자가 편하긴함.. 같이있음 신경이 곤두섬"), so every clause is tested.
+  const clauses = t
+    .split(/[\s.!?,~…·"'()\[\]]+/u)
+    .map((c) => c.replace(/[ㅋㅎㅠㅜ]+$/u, ''))
+    .filter(Boolean);
+  const selfReport = clauses.some((c) => c.length >= 2 && SELF_REPORT_ENDINGS.some((e) => c.endsWith(e)));
+  if (selfReport && t.length >= 15) scores.자기참조 += 2;
+  if (firstPersonHits >= 1 && t.length >= 15) scores.자기참조 += 1;
+
+  // 자기참조 is a fallback, never a winner: it fires on sentence shape alone, so a
+  // comment that also says something explicit ("위로가 됐어요") must be scored on that.
+  const ranked = Object.entries(scores)
+    .filter(([b]) => b !== '자기참조')
+    .sort((a, b) => b[1] - a[1]);
   const [top, topScore] = ranked[0];
+  const primary = topScore > 0 ? top : scores.자기참조 > 0 ? '자기참조' : '기타';
 
   return {
-    primary: topScore === 0 ? '기타' : top,
+    primary,
     // Comments routinely do two things at once ("나도 그래요, 위로가 됐어요") — keep them all.
     all: Object.entries(scores).filter(([, s]) => s > 0).map(([b]) => b),
     scores,
